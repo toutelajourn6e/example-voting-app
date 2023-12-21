@@ -1,0 +1,59 @@
+services:
+  vote:
+    build: ./vote
+    ports:
+      - "5001:80"
+    command: python app.py
+    networks:
+      - back-tier
+      - front-tier
+    depends_on:
+      - redis
+    volumes:
+      - "./vote:/app"
+ 
+  redis:
+    image: redis:alpine
+    networks:
+      - back-tier
+    volumes:
+      - "./heathchecks:/healthchecks"
+
+  worker:
+    build: ./worker
+    networks:
+      - back-tier
+    depends_on:
+      - redis
+      - db
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    networks:
+      - back-tier
+    volumes:
+      - "db-data:/var/lib/postgresql/data"
+
+  result:
+    build: ./result
+    ports:
+      - "5002:80"
+      - "5858:5858"
+    entrypoint: nodemon server.js
+    networks:
+      - back-tier
+      - front-tier
+    volumes:
+      - ./result:/app
+    depends_on:
+      - db
+
+networks:
+  back-tier:
+  front-tier:
+
+volumes:
+  db-data:  
